@@ -2,155 +2,187 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>fleet voice</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>mission control</title>
 <style>
-  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  html, body { height: 100%; margin: 0; }
-  body {
-    font-family: -apple-system, "Helvetica Neue", sans-serif;
-    background: #0f1113; color: #e8eaed;
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    gap: 22px; padding: 24px; overflow: hidden;
-  }
-  h1 { font-size: 15px; font-weight: 600; color: #9aa0a6; letter-spacing: .04em; margin: 0; }
-  #btn {
-    width: 210px; height: 210px; border-radius: 50%;
-    border: none; background: #1f6f6b; color: #fff;
-    font-size: 19px; font-weight: 600; letter-spacing: .02em;
-    box-shadow: 0 8px 40px rgba(31,111,107,.4); cursor: pointer;
-    transition: transform .08s ease, background .15s ease, box-shadow .15s ease;
-    touch-action: none; user-select: none;
-  }
-  #btn.rec { background: #d8322e; box-shadow: 0 0 0 14px rgba(216,50,46,.18), 0 8px 40px rgba(216,50,46,.4); transform: scale(1.04); }
-  #btn.busy { background: #444; box-shadow: none; }
-  #status { font-size: 13px; color: #9aa0a6; min-height: 18px; }
-  #out {
-    width: 100%; max-width: 560px; min-height: 96px; border-radius: 12px;
-    background: #17191c; border: 1px solid #2a2d31; padding: 16px 18px;
-    font-size: 17px; line-height: 1.5; white-space: pre-wrap; word-break: break-word;
-  }
-  #out:empty::before { content: "your words appear here"; color: #565b60; }
-  #copy { font: inherit; font-size: 13px; color: #9aa0a6; background: none; border: 1px solid #2a2d31; border-radius: 8px; padding: 8px 16px; cursor: pointer; }
-  #copy:active { background: #17191c; }
-  .hint { font-size: 11px; color: #565b60; }
+  :root { --bg:#0f1113; --panel:#17191c; --line:#2a2d31; --ink:#e8eaed; --dim:#9aa0a6; --faint:#565b60; --teal:#4aa9ad; --red:#d8322e; --green:#7bbf6a; --amber:#e0a13a; }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { height:100%; margin:0; }
+  body { font-family:-apple-system,"Helvetica Neue",sans-serif; background:var(--bg); color:var(--ink);
+    display:flex; flex-direction:column; overscroll-behavior:none; }
+  header { padding:calc(env(safe-area-inset-top) + 12px) 18px 12px; font-size:13px; font-weight:700; letter-spacing:.06em; color:var(--dim); text-transform:uppercase; }
+  header b { color:var(--teal); }
+  main { flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:6px 16px 20px; }
+  .view { display:none; } .view.on { display:block; }
+
+  /* voice */
+  #voicewrap { height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:20px; min-height:70vh; }
+  #btn { width:min(64vw,240px); height:min(64vw,240px); border-radius:50%; border:none; background:#1f6f6b; color:#fff;
+    font-size:19px; font-weight:600; box-shadow:0 8px 40px rgba(31,111,107,.4); touch-action:none; user-select:none; transition:transform .08s, background .15s, box-shadow .15s; }
+  #btn.rec { background:var(--red); box-shadow:0 0 0 14px rgba(216,50,46,.18),0 8px 40px rgba(216,50,46,.4); transform:scale(1.04); }
+  #btn.busy { background:#444; box-shadow:none; }
+  #vstatus { font-size:13px; color:var(--dim); min-height:18px; }
+  #out { width:100%; min-height:84px; border-radius:12px; background:var(--panel); border:1px solid var(--line); padding:14px 16px; font-size:17px; line-height:1.5; white-space:pre-wrap; word-break:break-word; }
+  #out:empty::before { content:"your words appear here"; color:var(--faint); }
+  #copy { font:inherit; font-size:13px; color:var(--dim); background:none; border:1px solid var(--line); border-radius:8px; padding:8px 16px; }
+
+  /* fleet */
+  .node { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:12px 14px; margin-bottom:10px; }
+  .node h2 { margin:0 0 8px; font-size:13px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--dim); display:flex; align-items:center; gap:8px; }
+  .node.off h2 { color:var(--amber); }
+  .agent { display:flex; align-items:center; gap:10px; padding:7px 0; border-top:1px solid var(--line); font-size:15px; }
+  .agent:first-of-type { border-top:none; }
+  .dot { width:9px; height:9px; border-radius:50%; background:var(--faint); flex:none; }
+  .dot.working { background:var(--teal); animation:p 1.2s ease-in-out infinite; }
+  .dot.done { background:var(--green); } .dot.idle { background:var(--faint); } .dot.blocked { background:var(--amber); }
+  @keyframes p { 50%{opacity:.35;} }
+  .agent .git { margin-left:auto; color:var(--faint); font-size:12px; }
+  .sub { padding:4px 0 4px 22px; font-size:13px; color:var(--dim); display:flex; align-items:center; gap:8px; }
+  .empty { color:var(--faint); font-size:13px; padding:2px 0; }
+  #cmdrow { display:flex; gap:8px; margin:6px 0 14px; }
+  #cmd { flex:1; font:inherit; font-size:16px; color:var(--ink); background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:11px 14px; }
+  #send, #cmdmic { font:inherit; border:1px solid var(--line); background:var(--panel); color:var(--ink); border-radius:10px; padding:0 15px; }
+  #cmdmic.rec { background:var(--red); border-color:var(--red); color:#fff; }
+  #cmdnote { color:var(--faint); font-size:11px; margin:-8px 0 14px; }
+  .updated { color:var(--faint); font-size:11px; text-align:center; padding:6px 0 2px; }
+
+  /* tab bar */
+  nav { display:flex; border-top:1px solid var(--line); background:var(--panel); padding-bottom:env(safe-area-inset-bottom); }
+  nav button { flex:1; font:inherit; font-size:12px; font-weight:600; letter-spacing:.04em; color:var(--dim); background:none; border:none; padding:12px 0 14px; }
+  nav button.on { color:var(--teal); }
 </style>
 </head>
 <body>
-  <h1>◈ fleet voice</h1>
-  <button id="btn">hold&nbsp;to&nbsp;talk</button>
-  <div id="status"></div>
-  <div id="out"></div>
-  <button id="copy" hidden>copy</button>
-  <div class="hint">transcribed by your fleet · nothing runs on this phone</div>
+<header>◈ <b id="orgname">mission control</b></header>
+<main>
+  <section id="v-voice" class="view on">
+    <div id="voicewrap">
+      <button id="btn">hold&nbsp;to&nbsp;talk</button>
+      <div id="vstatus"></div>
+      <div id="out"></div>
+      <button id="copy" hidden>copy</button>
+    </div>
+  </section>
+
+  <section id="v-fleet" class="view">
+    <div id="cmdrow">
+      <input id="cmd" placeholder="order for mission control…" enterkeyhint="send">
+      <button id="cmdmic" title="dictate">🎤</button>
+      <button id="send">send</button>
+    </div>
+    <div id="cmdnote">delivered to the fleet orchestrator via the signaling transport</div>
+    <div id="nodes"></div>
+    <div class="updated" id="updated"></div>
+  </section>
+</main>
+<nav>
+  <button data-view="voice" class="on">🎙 voice</button>
+  <button data-view="fleet">◫ fleet</button>
+</nav>
 
 <script>
-const RTDB = "https://signaling-dcfad-default-rtdb.europe-west1.firebasedatabase.app/mission-control/voice/jobs";
-const btn = document.getElementById("btn");
-const statusEl = document.getElementById("status");
-const out = document.getElementById("out");
-const copyBtn = document.getElementById("copy");
+const ROOT = "https://signaling-dcfad-default-rtdb.europe-west1.firebasedatabase.app/mission-control";
+const $ = s => document.getElementById(s);
+const esc = s => String(s==null?"":s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
-let media, chunks = [], stream, recording = false, mime = "";
+/* tabs */
+let fleetTimer=null;
+document.querySelectorAll("nav button").forEach(b=>b.addEventListener("click",()=>{
+  document.querySelectorAll("nav button").forEach(x=>x.classList.remove("on"));
+  b.classList.add("on");
+  const v=b.dataset.view;
+  $("v-voice").classList.toggle("on",v==="voice");
+  $("v-fleet").classList.toggle("on",v==="fleet");
+  if(v==="fleet"){ loadFleet(); fleetTimer=setInterval(loadFleet,3000); }
+  else { clearInterval(fleetTimer); fleetTimer=null; }
+}));
 
-function pickMime() {
-  for (const m of ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/aac", ""]) {
-    if (m === "" || (window.MediaRecorder && MediaRecorder.isTypeSupported(m))) return m;
+/* ---- fleet view ---- */
+let globalNode="air";
+async function loadFleet(){
+  try{
+    const d=await (await fetch(`${ROOT}/fleet-state.json`,{cache:"no-store"})).json();
+    if(!d) return;
+    $("orgname").textContent=d.org||"mission control";
+    globalNode=d.global||"air";
+    const nodes=d.nodes||[];
+    $("nodes").innerHTML=nodes.map(n=>{
+      const agents=(n.agents||[]);
+      const rows=agents.length? agents.map(a=>`
+        <div class="agent"><span class="dot ${a.status||''}"></span><span>${esc(a.name)}</span>${a.git?`<span class="git">${esc(a.git)}</span>`:''}</div>
+        ${(a.subs||[]).map(s=>`<div class="sub"><span class="dot ${s.status==='done'?'done':'working'}"></span>${esc(s.name)}</div>`).join('')}
+      `).join('') : `<div class="empty">no agents</div>`;
+      return `<div class="node ${n.ok?'':'off'}"><h2>⌂ ${esc(n.node)}${n.ok?'':' · offline'}${n.node===globalNode?' · mission control':''}</h2>${rows}</div>`;
+    }).join('');
+    const age=Math.round((Date.now()-(d.updated||0))/1000);
+    $("updated").textContent=`updated ${age<3?'just now':age+'s ago'}`;
+  }catch(_){}
+}
+async function sendCommand(text){
+  if(!text.trim()) return;
+  const id=Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+  await fetch(`${ROOT}/mailbox/${globalNode}/${id}.json`,{method:"PUT",body:JSON.stringify({from:"phone",body:text,ts:Date.now()})});
+  $("cmd").value="";
+  $("cmdnote").textContent="✓ sent to "+globalNode;
+  setTimeout(()=>$("cmdnote").textContent="delivered to the fleet orchestrator via the signaling transport",2500);
+}
+$("send").addEventListener("click",()=>sendCommand($("cmd").value));
+$("cmd").addEventListener("keydown",e=>{ if(e.key==="Enter") sendCommand($("cmd").value); });
+
+/* ---- voice (shared recorder) ---- */
+let stream,media,chunks=[],recTarget=null,mime="";
+function pickMime(){ for(const m of ["audio/webm;codecs=opus","audio/webm","audio/mp4","audio/aac",""]){ if(m===""||(window.MediaRecorder&&MediaRecorder.isTypeSupported(m)))return m; } return ""; }
+async function ensureStream(){ if(stream)return stream; stream=await navigator.mediaDevices.getUserMedia({audio:true}); return stream; }
+async function startRec(target){
+  if(recTarget)return;
+  try{ await ensureStream(); }catch(_){ setV("microphone blocked — allow access"); return; }
+  mime=pickMime(); chunks=[]; recTarget=target;
+  media=mime?new MediaRecorder(stream,{mimeType:mime}):new MediaRecorder(stream);
+  media.ondataavailable=e=>{ if(e.data&&e.data.size)chunks.push(e.data); };
+  media.onstop=onStop; media.start();
+}
+function stopRec(){ if(!recTarget)return; try{media.stop();}catch(_){} }
+function blobToB64(b){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(String(r.result).split(",")[1]); r.onerror=rej; r.readAsDataURL(b); }); }
+async function transcribe(blob){
+  const b64=await blobToB64(blob);
+  const id=Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+  await fetch(`${ROOT}/voice/jobs/${id}.json`,{method:"PUT",body:JSON.stringify({audio_b64:b64,mime:blob.type,status:"pending",ts:Date.now()})});
+  for(let i=0;i<40;i++){ await new Promise(r=>setTimeout(r,500));
+    try{ const j=await (await fetch(`${ROOT}/voice/jobs/${id}.json`,{cache:"no-store"})).json();
+      if(j&&j.status==="done"){ fetch(`${ROOT}/voice/jobs/${id}.json`,{method:"DELETE"}).catch(()=>{}); return j.text||""; }
+      if(j&&j.status==="error") return ""; }catch(_){}
+  } return "";
+}
+async function onStop(){
+  const target=recTarget; recTarget=null;
+  const blob=new Blob(chunks,{type:media.mimeType||mime||"audio/webm"});
+  if(target==="voice"){ btnBusy(); }
+  if(target==="cmd"){ $("cmdmic").classList.remove("rec"); }
+  if(blob.size<800){ target==="voice"?resetBtn("too short"):null; return; }
+  if(target==="voice") setV("transcribing on your fleet…");
+  const text=await transcribe(blob);
+  if(target==="voice"){
+    if(text&&text.trim()){ $("out").textContent=($("out").textContent?$("out").textContent+" ":"")+text.trim(); $("copy").hidden=false; resetBtn(""); }
+    else resetBtn("no speech detected");
+  } else if(target==="cmd"){
+    if(text&&text.trim()) $("cmd").value=($("cmd").value?$("cmd").value+" ":"")+text.trim();
   }
-  return "";
 }
-
-async function ensureStream() {
-  if (stream) return stream;
-  stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-  return stream;
-}
-
-async function startRec() {
-  if (recording) return;
-  try { await ensureStream(); }
-  catch (e) { statusEl.textContent = "microphone blocked — allow access"; return; }
-  mime = pickMime();
-  chunks = [];
-  media = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
-  media.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
-  media.onstop = handleStop;
-  media.start();
-  recording = true;
-  btn.classList.add("rec");
-  btn.textContent = "listening…";
-  statusEl.textContent = "";
-}
-
-function stopRec() {
-  if (!recording) return;
-  recording = false;
-  btn.classList.remove("rec");
-  btn.classList.add("busy");
-  btn.textContent = "…";
-  try { media.stop(); } catch (_) {}
-}
-
-function blobToB64(blob) {
-  return new Promise((resolve, reject) => {
-    const r = new FileReader();
-    r.onload = () => resolve(String(r.result).split(",")[1]);
-    r.onerror = reject;
-    r.readAsDataURL(blob);
-  });
-}
-
-async function handleStop() {
-  const blob = new Blob(chunks, { type: media.mimeType || mime || "audio/webm" });
-  if (blob.size < 800) { reset("too short — hold and speak"); return; }
-  statusEl.textContent = "transcribing on your fleet…";
-  try {
-    const b64 = await blobToB64(blob);
-    const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
-    const job = { audio_b64: b64, mime: blob.type, status: "pending", ts: Date.now() };
-    await fetch(`${RTDB}/${id}.json`, { method: "PUT", body: JSON.stringify(job) });
-    const text = await pollResult(id);
-    if (text && text.trim()) {
-      out.textContent = (out.textContent ? out.textContent + " " : "") + text.trim();
-      copyBtn.hidden = false;
-      reset("");
-    } else {
-      reset("no speech detected");
-    }
-    fetch(`${RTDB}/${id}.json`, { method: "DELETE" }).catch(() => {});
-  } catch (e) {
-    reset("fleet unreachable — retry");
-  }
-}
-
-async function pollResult(id) {
-  for (let i = 0; i < 40; i++) {
-    await new Promise(r => setTimeout(r, 500));
-    try {
-      const r = await fetch(`${RTDB}/${id}.json`, { cache: "no-store" });
-      const j = await r.json();
-      if (j && j.status === "done") return j.text || "";
-      if (j && j.status === "error") return "";
-    } catch (_) {}
-  }
-  return "";
-}
-
-function reset(msg) {
-  btn.classList.remove("busy", "rec");
-  btn.textContent = "hold to talk";
-  statusEl.textContent = msg || "";
-}
-
-// pointer (works for touch + mouse); hold to talk
-btn.addEventListener("pointerdown", e => { e.preventDefault(); startRec(); });
-btn.addEventListener("pointerup", e => { e.preventDefault(); stopRec(); });
-btn.addEventListener("pointercancel", () => stopRec());
-btn.addEventListener("pointerleave", () => { if (recording) stopRec(); });
-
-copyBtn.addEventListener("click", async () => {
-  try { await navigator.clipboard.writeText(out.textContent); copyBtn.textContent = "copied"; setTimeout(() => copyBtn.textContent = "copy", 1200); } catch (_) {}
-});
+/* voice button */
+const btn=$("btn");
+function setV(m){ $("vstatus").textContent=m||""; }
+function btnBusy(){ btn.classList.remove("rec"); btn.classList.add("busy"); btn.textContent="…"; }
+function resetBtn(m){ btn.classList.remove("busy","rec"); btn.textContent="hold to talk"; setV(m); }
+btn.addEventListener("pointerdown",e=>{ e.preventDefault(); btn.classList.add("rec"); btn.textContent="listening…"; setV(""); startRec("voice"); });
+btn.addEventListener("pointerup",e=>{ e.preventDefault(); stopRec(); });
+btn.addEventListener("pointercancel",()=>stopRec());
+$("copy").addEventListener("click",async()=>{ try{ await navigator.clipboard.writeText($("out").textContent); $("copy").textContent="copied"; setTimeout(()=>$("copy").textContent="copy",1200);}catch(_){}});
+/* command mic */
+$("cmdmic").addEventListener("pointerdown",e=>{ e.preventDefault(); $("cmdmic").classList.add("rec"); startRec("cmd"); });
+$("cmdmic").addEventListener("pointerup",e=>{ e.preventDefault(); stopRec(); });
 </script>
 </body>
 </html>
