@@ -66,7 +66,7 @@
 </style>
 </head>
 <body>
-<header>◈ <b id="orgname">mission control</b><span id="hdrsub" style="margin-left:auto;color:var(--faint);font-size:11px;font-weight:400;letter-spacing:0;text-transform:none;"></span></header>
+<header>◈ <b id="orgname">mission control</b><span id="hdrsub" style="margin-left:auto;color:var(--faint);font-size:11px;font-weight:400;letter-spacing:0;text-transform:none;"></span><button id="reload" title="reload" style="margin-left:12px;font-size:17px;color:var(--dim);background:none;border:none;padding:2px 6px;">↻</button></header>
 <main>
   <section id="v-fleet" class="view on">
     <div id="cmdrow"><input id="cmd" placeholder="order for mission control…" enterkeyhint="send"><button id="cmdmic">🎤</button><button id="send">send</button></div>
@@ -176,9 +176,12 @@ $("copy").addEventListener("click",async()=>{try{await navigator.clipboard.write
 $("cmdmic").addEventListener("pointerdown",e=>{e.preventDefault();$("cmdmic").classList.add("rec");startRec("cmd");});
 $("cmdmic").addEventListener("pointerup",e=>{e.preventDefault();stopRec();});
 
+/* force a network-fresh copy (iOS standalone apps serve from cache on a plain reload) */
+function hardReload(){location.href=location.pathname+"?v="+Date.now();}
+$("reload").addEventListener("click",hardReload);
 /* self-update: reload when a new build is published (matches the desktop app's hot-reload) */
 let buildStamp=null;
-async function checkBuild(){try{const v=await(await fetch(`${ROOT}/webapp-build.json`,{cache:"no-store"})).json();if(v&&buildStamp&&v!==buildStamp){location.reload();}if(v)buildStamp=v;}catch(_){}}
+async function checkBuild(){try{const v=await(await fetch(`${ROOT}/webapp-build.json`,{cache:"no-store"})).json();if(v&&buildStamp&&v!==buildStamp){hardReload();}if(v)buildStamp=v;}catch(_){}}
 
 loadReports();loadState();
 setInterval(loadState,3000);
