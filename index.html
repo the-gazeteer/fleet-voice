@@ -60,6 +60,12 @@
   #out:empty::before{content:"your words appear here";color:var(--faint);}
   #copy{font:inherit;font-size:13px;color:var(--dim);background:none;border:1px solid var(--line);border-radius:8px;padding:8px 16px;}
 
+  /* home handoff */
+  #homebar{display:none;align-items:center;gap:10px;margin:6px 12px 2px;padding:11px 14px;background:var(--panel);border:1px solid #24494a;border-radius:10px;font-size:14px;color:var(--dim);}
+  #homebar.on{display:flex;}
+  #homebar a{color:var(--teal);font-weight:600;text-decoration:none;margin-left:auto;padding:6px 12px;border:1px solid #24494a;border-radius:8px;flex:none;}
+  #homedismiss{font:inherit;font-size:15px;color:var(--faint);background:none;border:none;padding:2px 6px;flex:none;}
+
   nav{display:flex;border-top:1px solid var(--line);background:var(--panel);padding-bottom:env(safe-area-inset-bottom);}
   nav button{flex:1;font:inherit;font-size:12px;font-weight:600;letter-spacing:.04em;color:var(--dim);background:none;border:none;padding:12px 0 14px;}
   nav button.on{color:var(--teal);}
@@ -67,6 +73,7 @@
 </head>
 <body>
 <header>◈ <b id="orgname">mission control</b><span id="hdrsub" style="margin-left:auto;color:var(--faint);font-size:11px;font-weight:400;letter-spacing:0;text-transform:none;"></span><button id="reload" title="reload" style="margin-left:12px;font-size:17px;color:var(--dim);background:none;border:none;padding:2px 6px;">↻</button></header>
+<div id="homebar">⌂ you're home — the full dashboard is reachable<a id="homelink" href="#">open</a><button id="homedismiss" title="hide for 30 min">✕</button></div>
 <main>
   <section id="v-fleet" class="view on">
     <div id="cmdrow"><input id="cmd" placeholder="order for mission control…" enterkeyhint="send"><button id="cmdmic">🎤</button><button id="send">send</button></div>
@@ -183,11 +190,29 @@ $("reload").addEventListener("click",hardReload);
 let buildStamp=null;
 async function checkBuild(){try{const v=await(await fetch(`${ROOT}/webapp-build.json`,{cache:"no-store"})).json();if(v&&buildStamp&&v!==buildStamp){hardReload();}if(v)buildStamp=v;}catch(_){}}
 
+/* home handoff: away-from-home this app is the only control surface, but on the
+   home LAN the full dashboard (live terminals, reports, real-cert mic) is one tap
+   away. Probe the dashboard's TLS twin: on the LAN with the mkcert root trusted
+   the no-cors fetch resolves (opaque); away, .local doesn't resolve and it
+   rejects; without the trusted root the cert error also rejects — so the banner
+   simply never shows where the handoff wouldn't work. */
+const DASH_URL="https://miguels-macbook-air.local:4443/";
+const HOME_SNOOZE="home-handoff-snooze";
+$("homelink").href=DASH_URL;
+async function checkHome(){
+  if(Date.now()<+(localStorage.getItem(HOME_SNOOZE)||0)){$("homebar").classList.remove("on");return;}
+  try{await fetch(DASH_URL,{mode:"no-cors",cache:"no-store",signal:AbortSignal.timeout(2500)});$("homebar").classList.add("on");}
+  catch(_){$("homebar").classList.remove("on");}
+}
+$("homedismiss").addEventListener("click",()=>{localStorage.setItem(HOME_SNOOZE,String(Date.now()+30*60*1000));$("homebar").classList.remove("on");});
+
 loadReports();loadState();
 setInterval(loadState,3000);
 setInterval(loadReports,12000);
 setInterval(checkBuild,15000);
 checkBuild();
+checkHome();
+setInterval(checkHome,60000);
 </script>
 </body>
 </html>
