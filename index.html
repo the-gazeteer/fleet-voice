@@ -196,12 +196,15 @@ async function checkBuild(){try{const v=await(await fetch(`${ROOT}/webapp-build.
    the no-cors fetch resolves (opaque); away, .local doesn't resolve and it
    rejects; without the trusted root the cert error also rejects — so the banner
    simply never shows where the handoff wouldn't work. */
-const DASH_URL="https://miguels-macbook-air.local:4443/";
+/* Both addresses are SANs on the dashboard's mkcert cert: the .local name is what
+   Safari resolves (mDNS is system-wide on Apple platforms); Chrome's network stack
+   won't resolve .local, so the LAN IP is probed too — first to answer wins. */
+const DASH_URLS=["https://miguels-macbook-air.local:4443/","https://192.168.0.61:4443/"];
 const HOME_SNOOZE="home-handoff-snooze";
-$("homelink").href=DASH_URL;
+const probe=u=>fetch(u,{mode:"no-cors",cache:"no-store",signal:AbortSignal.timeout(2500)}).then(()=>u);
 async function checkHome(){
   if(Date.now()<+(localStorage.getItem(HOME_SNOOZE)||0)){$("homebar").classList.remove("on");return;}
-  try{await fetch(DASH_URL,{mode:"no-cors",cache:"no-store",signal:AbortSignal.timeout(2500)});$("homebar").classList.add("on");}
+  try{$("homelink").href=await Promise.any(DASH_URLS.map(probe));$("homebar").classList.add("on");}
   catch(_){$("homebar").classList.remove("on");}
 }
 $("homedismiss").addEventListener("click",()=>{localStorage.setItem(HOME_SNOOZE,String(Date.now()+30*60*1000));$("homebar").classList.remove("on");});
